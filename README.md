@@ -15,7 +15,7 @@ For authentication, GitMover uses a personal access token, which can be generate
 ###Positional Arguments
   `user_name`: Your GitHub (public or enterprise) username: name@email.com
   
-  `token`: Your GitHub (public or enterprise) private access token
+  `token`: Your GitHub (public or enterprise) personal access token
   
   `source_repo`: the team and repo to migrate from: `<team_name>/<repo_name>`
   
