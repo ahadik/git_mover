@@ -10,6 +10,8 @@ Install them with pip: `pip install requests argparse`.
 ##Usage
 `issue_mover.py [-h] [--sourceRoot [SOURCEROOT]] [--destinationRoot [DESTINATIONROOT]] [--milestones] [--labels] [--issues] user_name token source_repo destination_repo`
 
+For authentication, GitMover uses a personal access token, which can be generated in your GitHub Profile settings.
+
 ###Positional Arguments
   `user_name`: Your GitHub (public or enterprise) username: name@email.com
   
