@@ -165,7 +165,7 @@ def create_issues(issues, destination_url, destination, milestones, labels, mile
 def main():
 	parser = argparse.ArgumentParser(description='Migrate Milestones, Labels, and Issues between two GitHub repositories. To migrate a subset of elements (Milestones, Labels, Issues), use the element specific flags (--milestones, --lables, --issues). Providing no flags defaults to all element types being migrated.')
 	parser.add_argument('user_name', type=str, help='Your GitHub (public or enterprise) username: name@email.com')
-	parser.add_argument('token', type=str, help='Your GitHub (public or enterprise) private access token')
+	parser.add_argument('token', type=str, help='Your GitHub (public or enterprise) personal access token')
 	parser.add_argument('source_repo', type=str, help='the team and repo to migrate from: <team_name>/<repo_name>')
 	parser.add_argument('destination_repo', type=str, help='the team and repo to migrate to: <team_name>/<repo_name>')
 	parser.add_argument('--destinationToken', '-dt', nargs='?', type=str, help='Your personal access token for the destination account, if you are migrating between GitHub installations')
