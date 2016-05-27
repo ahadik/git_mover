@@ -8,7 +8,14 @@ GitMover is just a Python script. You'll need `requests`, and `argparse` install
 Install them with pip: `pip install requests argparse`.
 
 ##Usage
-`issue_mover.py [-h] [--sourceRoot [SOURCEROOT]] [--destinationRoot [DESTINATIONROOT]] [--milestones] [--labels] [--issues] user_name token source_repo destination_repo`
+```
+git-mover.py [-h] [--destinationToken [DESTINATIONTOKEN]]
+                    [--destinationUserName [DESTINATIONUSERNAME]]
+                    [--sourceRoot [SOURCEROOT]]
+                    [--destinationRoot [DESTINATIONROOT]] [--milestones]
+                    [--labels] [--issues]
+                    user_name token source_repo destination_repo
+```
 
 For authentication, GitMover uses a personal access token, which can be generated in your GitHub Profile settings.
 
@@ -27,6 +34,10 @@ For authentication, GitMover uses a personal access token, which can be generate
   `--sourceRoot [SOURCEROOT], -sr [SOURCEROOT]`: The GitHub domain to migrate from. Defaults to https://www.github.com. For GitHub enterprise customers, enter the domain for your GitHub installation.
   
   `--destinationRoot [DESTINATIONROOT], -dr [DESTINATIONROOT]`: The GitHub domain to migrate to. Defaults to https://www.github.com. For GitHub enterprise customers, enter the domain for your GitHub installation.
+  
+  `--destinationToken [DESTINATIONTOKEN], -dt [DESTINATIONTOKEN]`: Your personal access token for the destination account, if you are migrating between different GitHub installations.
+  
+  `--destinationUserName [DESTINATIONUSERNAME], -dun [DESTINATIONUSERNAME]`: Username (email address) for destination account, if you are migrating between different GitHub installations.
   
   `--milestones, -m`: Toggle on Milestone migration.
   
