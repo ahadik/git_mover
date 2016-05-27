@@ -132,12 +132,12 @@ INPUT:
 OUTCOME: Post issues to GitHub
 OUTPUT: Null
 '''
-def create_issues(issues, destination_url, destination, milestones, labels, milestone_map, credentials):
+def create_issues(issues, destination_url, destination, milestones, labels, milestone_map, credentials, sameInstall):
 	url = destination_url+"repos/"+destination+"/issues"
 	for issue in issues:
 		#create a new issue object containing only the data necessary for the creation of a new issue
 		assignee = None
-		if (issue["assignee"]):
+		if (issue["assignee"] && sameInstall):
 			assignee = issue["assignee"]["login"]
 		issue_prime = {"title" : issue["title"], "body" : issue["body"], "assignee": assignee, "state" : issue["state"]}
 		#if milestones were migrated and the issue to be posted contains milestones
@@ -231,7 +231,10 @@ def main():
 	if args.issues:
 		issues = download_issues(source_root, source_repo, source_credentials)
 		if issues:
-			res = create_issues(issues, destination_root, destination_repo, args.milestones, args.labels, milestone_map, destination_credentials)
+			sameInstall = False
+			if (args.sourceRoot == args.destinationRoot):
+				sameInstall = True
+			res = create_issues(issues, destination_root, destination_repo, args.milestones, args.labels, milestone_map, destination_credentials, sameInstall)
 		elif issues == False:
 			sys.stderr.write('ERROR: Issues failed to be retrieved. Exiting...')
 			quit()
