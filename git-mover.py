@@ -1,4 +1,4 @@
-import requests, json, collections, argparse, sys
+import requests, json, argparse, sys
 
 #Test if a response object is valid
 def check_res(r):
@@ -95,6 +95,8 @@ def create_milestones(milestones, destination_url, destination, credentials):
 			returned_milestone = json.loads(r.text)
 			#map the original source milestone's number to the newly created milestone's number
 			milestone_map[milestone['number']] = returned_milestone['number']
+		else:
+			print status
 	return milestone_map
 
 '''
@@ -134,7 +136,10 @@ def create_issues(issues, destination_url, destination, milestones, labels, mile
 	url = destination_url+"repos/"+destination+"/issues"
 	for issue in issues:
 		#create a new issue object containing only the data necessary for the creation of a new issue
-		issue_prime = {"title" : issue["title"], "body" : issue["title"], "assignee": issue["assignee"]["login"], "state" : issue["state"]};
+		assignee = None
+		if (issue["assignee"]):
+			assignee = issue["assignee"]["login"]
+		issue_prime = {"title" : issue["title"], "body" : issue["body"], "assignee": assignee, "state" : issue["state"]}
 		#if milestones were migrated and the issue to be posted contains milestones
 		if milestones and "milestone" in issue and issue["milestone"]!= None:
 			#if the milestone associated with the issue is in the milestone map
@@ -163,8 +168,10 @@ def main():
 	parser.add_argument('token', type=str, help='Your GitHub (public or enterprise) private access token')
 	parser.add_argument('source_repo', type=str, help='the team and repo to migrate from: <team_name>/<repo_name>')
 	parser.add_argument('destination_repo', type=str, help='the team and repo to migrate to: <team_name>/<repo_name>')
-	parser.add_argument('--sourceRoot', '-sr', nargs='?', const='https://www.github.com', type=str, help='The GitHub domain to migrate from. Defaults to https://www.github.com. For GitHub enterprise customers, enter the domain for your GitHub installation.')
-	parser.add_argument('--destinationRoot', '-dr', nargs='?', const='https://www.github.com', type=str, help='The GitHub domain to migrate to. Defaults to https://www.github.com. For GitHub enterprise customers, enter the domain for your GitHub installation.')
+	parser.add_argument('--destinationToken', '-dt', nargs='?', type=str, help='Your personal access token for the destination account, if you are migrating between GitHub installations')
+	parser.add_argument('--destinationUserName', '-dun', nargs='?', type=str, help='Username for destination account, if you are migrating between GitHub installations')
+	parser.add_argument('--sourceRoot', '-sr', nargs='?', default='https://api.github.com', type=str, help='The GitHub domain to migrate from. Defaults to https://www.github.com. For GitHub enterprise customers, enter the domain for your GitHub installation.')
+	parser.add_argument('--destinationRoot', '-dr', nargs='?', default='https://api.github.com', type=str, help='The GitHub domain to migrate to. Defaults to https://www.github.com. For GitHub enterprise customers, enter the domain for your GitHub installation.')
 	parser.add_argument('--milestones', '-m', action="store_true", help='Toggle on Milestone migration.')
 	parser.add_argument('--labels', '-l', action="store_true", help='Toggle on Label migration.')
 	parser.add_argument('--issues', '-i', action="store_true", help='Toggle on Issue migration.')
@@ -172,10 +179,27 @@ def main():
 
 	destination_repo = args.destination_repo
 	source_repo = args.source_repo
-	credentials = {'user_name' : args.user_name, 'token' : args.token}
-	api_route = '/api/v3/'
-	source_root = args.sourceRoot+api_route
-	destination_root = args.destinationRoot+api_route
+	source_credentials = {'user_name' : args.user_name, 'token' : args.token}
+
+	if (args.sourceRoot != 'https://api.github.com'):
+		args.sourceRoot += '/api/v3'
+
+	if (args.destinationRoot != 'https://api.github.com'):
+		args.destinationRoot += '/api/v3'
+
+	if (args.sourceRoot != args.destinationRoot):
+		if not (args.destinationToken):
+			sys.stderr.write("Error: Source and Destination Roots are different but no token was supplied for the destination repo.")
+			quit()
+
+	if not (args.destinationUserName):
+		print('No destination User Name provided, defaulting to source User Name: '+args.user_name)
+		args.destinationUserName = args.user_name
+
+	destination_credentials = {'user_name': args.destinationUserName, 'token': args.destinationToken}
+
+	source_root = args.sourceRoot+'/'
+	destination_root = args.destinationRoot+'/'
 
 	milestone_map = None
 
@@ -185,28 +209,34 @@ def main():
 		args.issues = True
 
 	if args.milestones:
-		milestones = download_milestones(source_root, source_repo, credentials)
+		milestones = download_milestones(source_root, source_repo, source_credentials)
 		if milestones:
-			milestone_map = create_milestones(milestones, destination_root, destination_repo, credentials)
-		else:
+			milestone_map = create_milestones(milestones, destination_root, destination_repo, destination_credentials)
+		elif milestones == False:
 			sys.stderr.write('ERROR: Milestones failed to be retrieved. Exiting...')
 			quit()
+		else:
+			print "No milestones found. None migrated"
 
 	if args.labels:
-		labels = download_labels(source_root, source_repo, credentials)
+		labels = download_labels(source_root, source_repo, source_credentials)
 		if labels:
-			res = create_labels(labels, destination_root, destination_repo, credentials)
-		else:
+			res = create_labels(labels, destination_root, destination_repo, destination_credentials)
+		elif labels == False:
 			sys.stderr.write('ERROR: Labels failed to be retrieved. Exiting...')
 			quit()
+		else:
+			print "No Labels found. None migrated"
 
 	if args.issues:
-		issues = download_issues(source_root, source_repo, credentials)
+		issues = download_issues(source_root, source_repo, source_credentials)
 		if issues:
-			res = create_issues(issues, destination_root, destination_repo, args.milestones, args.labels, milestone_map, credentials)
-		else:
+			res = create_issues(issues, destination_root, destination_repo, args.milestones, args.labels, milestone_map, destination_credentials)
+		elif issues == False:
 			sys.stderr.write('ERROR: Issues failed to be retrieved. Exiting...')
 			quit()
+		else:
+			print "No Issues found. None migrated"
 
 if __name__ == "__main__":
 	main()
