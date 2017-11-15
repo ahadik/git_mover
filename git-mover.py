@@ -15,7 +15,7 @@ def main():
     parser.add_argument('--labels', '-l', action="store_true", help='Toggle on Label migration.')
     parser.add_argument('--issues', '-i', action="store_true", help='Toggle on Issue migration.')
     parser.add_argument('--projects', '-p', action="store_true", help='Toggle on Projects migration.')
-    parser.add_argument('--pull_requests', '-pr', action="store_true", help='Toggle on Pull Requests migration.')
+    # parser.add_argument('--pull_requests', '-pr', action="store_true", help='Toggle on Pull Requests migration.')
     parser.add_argument('--forceAssignee', '-fa', action="store_true", help='Force assignees between repositories.')
     
     args = parser.parse_args()
