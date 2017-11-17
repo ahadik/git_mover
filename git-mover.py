@@ -58,25 +58,25 @@ def main():
     if args.projects: # or args.pull_requests == True:
         args.issues = True
 
-    # if args.milestones:
-    #     milestones = movers.download_milestones(source_root, source_repo, source_credentials)
-    #     if milestones:
-    #         milestone_map = movers.milestones.create_milestones(milestones, destination_root, destination_repo, destination_credentials)
-    #     elif not milestones:
-    #         sys.stderr.write('ERROR: Milestones failed to be retrieved. Exiting...')
-    #         quit()
-    #     else:
-    #         print "No milestones found. None migrated"
+    if args.milestones:
+        milestones = movers.download_milestones(source_root, source_repo, source_credentials)
+        if milestones:
+            milestone_map = movers.milestones.create_milestones(milestones, destination_root, destination_repo, destination_credentials)
+        elif not milestones:
+            sys.stderr.write('ERROR: Milestones failed to be retrieved. Exiting...')
+            quit()
+        else:
+            print "No milestones found. None migrated"
 
-    # if args.labels:
-    #     labels = movers.download_labels(source_root, source_repo, source_credentials)
-    #     if labels:
-    #         movers.create_labels(labels, destination_root, destination_repo, destination_credentials)
-    #     elif not labels:
-    #         sys.stderr.write('ERROR: Labels failed to be retrieved. Exiting...')
-    #         quit()
-    #     else:
-    #         print "No Labels found. None migrated"
+    if args.labels:
+        labels = movers.download_labels(source_root, source_repo, source_credentials)
+        if labels:
+            movers.create_labels(labels, destination_root, destination_repo, destination_credentials)
+        elif not labels:
+            sys.stderr.write('ERROR: Labels failed to be retrieved. Exiting...')
+            quit()
+        else:
+            print "No Labels found. None migrated"
 
     if args.issues:
         issues = movers.download_issues(source_root, source_repo, source_credentials)
@@ -92,19 +92,19 @@ def main():
     else:
         issues = False
 
-    # if args.projects and issues != False:
-    #     projects = movers.download_projects(source_root, source_repo, source_credentials)
-    #     if projects:
-    #         movers.create_projects(projects, destination_root, destination_repo, issue_map, destination_credentials, {
-    #             "source_url": source_root, 
-    #             "source": source_repo, 
-    #             "credentials": source_credentials,
-    #         })
-    #     elif not projects:
-    #         sys.stderr.write("ERROR: Projects failed to be retrievied. Exiting...")
-    #         quit()
-    #     else:
-    #         print "No Projects found. None migrated"
+    if args.projects and issues != False:
+        projects = movers.download_projects(source_root, source_repo, source_credentials)
+        if projects:
+            movers.create_projects(projects, destination_root, destination_repo, issue_map, destination_credentials, {
+                "source_url": source_root, 
+                "source": source_repo, 
+                "credentials": source_credentials,
+            })
+        elif not projects:
+            sys.stderr.write("ERROR: Projects failed to be retrievied. Exiting...")
+            quit()
+        else:
+            print "No Projects found. None migrated"
 
 if __name__ == "__main__":
     main()

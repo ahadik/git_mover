@@ -66,11 +66,8 @@ def create_issues(issues, destination_url, destination, milestones, labels, mile
             
             continue
 
-        # TODO remove this break point before last tests
-        continue
-
         #create a new issue object containing only the data necessary for the creation of a new issue
-        issue_prime = {"title" : issue["title"], "body" : add_user_to_text(issue["user"]["login"], issue["body"])}
+        issue_prime = {"title" : issue["title"], "body" : get_issue_body(issue)}
 
         if (issue.get("assignee", False) and same_install):
             assignee = get_destination_username(issue["assignee"]["login"])
@@ -103,19 +100,16 @@ def create_issues(issues, destination_url, destination, milestones, labels, mile
 
         returned_issue = json.loads(r.text)
 
+        if issue.get("comments", 0) > 0:
+            issue_comments = download_issue_comments(issue.get("comments_url"), source_credentials)
+            create_issue_comments(issue_comments, returned_issue.get("comments_url"), credentials)
+
         print("update state with current value")
         issue_prime["state"] = issue["state"]
         patch_req(returned_issue.get("url"), json.dumps(issue_prime), credentials)
 
         issue_map[int(issue['number'])] = int(returned_issue['number'])
         print "Matched numbers: %d -> %d" % (int(issue['number']), int(returned_issue['number']))
-
-        if issue.get("comments", 0) > 0:
-            issue_comments = download_issue_comments(issue.get("comments_url"), source_credentials)
-            create_issue_comments(issue_comments, returned_issue.get("comments_url"), credentials)
-
-    print "Issue Map: "
-    print issue_map
 
     return issue_map
 
@@ -135,3 +129,6 @@ def make_flat_issue(issue_dict):
         flatten_issue += "pull_request"
 
     return flatten_issue
+
+def get_issue_body(issue):
+    return "[Original issue](%s); %s" % (issue["html_url"], add_user_to_text(issue["user"]["login"], issue["body"]))
