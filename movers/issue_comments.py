@@ -1,4 +1,4 @@
-import json, sys
+import json
 from libs import *
 
 def download_issue_comments(comments_url, credentials):
