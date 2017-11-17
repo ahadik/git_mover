@@ -1,3 +1,4 @@
+import requests
 '''
 INPUT: an API endpoint for posting data
 OUTPUT: the request object containing the posted data response for successful requests. If a request fails, False is returnedself.

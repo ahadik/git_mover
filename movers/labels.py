@@ -10,11 +10,7 @@ OUTPUT: retrieved labels if request was successful. False otherwise
 def download_labels(source_url, source, credentials):
     print "Downloading labels"
     url = source_url+"repos/"+source+"/labels?filter=all"
-    r = get_req(url, credentials)
-    status = check_res(r)
-    if status:
-        return json.loads(r.text)
-    return False
+    return get_data(url, credentials)
 
 '''
 INPUT:

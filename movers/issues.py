@@ -1,5 +1,7 @@
-import json
+import json, sys
 from libs import *
+from movers.issue_comments import create_issue_comments, download_issue_comments
+from movers.pull_requests import process_pull_request
 
 '''
 INPUT:
@@ -9,15 +11,27 @@ OUTPUT: retrieved issues sorted by their number if request was successful. False
 '''
 def download_issues(source_url, source, credentials):
     print "Downloading issues"
+    page_number = 1
+    per_page = 50
+    url = source_url+"repos/"+source+"/issues?filter=all&state=all&direction=asc&page=%d&per_page=%d"
+    sorted_issues = []
+    while True:
+        print "Checking page %d" % page_number
+        current_page_url = url % (page_number, per_page)
+        data = get_data(current_page_url, credentials)
+        if data:
+            #if the requests succeeded, sort the retireved issues by their number
+            sorted_issues += sorted(data, key=lambda k: k['number'])
 
-    url = source_url+"repos/"+source+"/issues?filter=all&state=all"
-    r = get_req(url, credentials)
-    status = check_res(r)
-    if status:
-        #if the requests succeeded, sort the retireved issues by their number
-        sorted_issues = sorted(json.loads(r.text), key=lambda k: k['number'])
-        return sorted_issues
-    return False
+            if len(data) < per_page:
+                break
+
+            page_number += 1            
+        else:
+            break
+
+    print "Found %d issues" % len(sorted_issues)
+    return sorted_issues
 
 '''
 INPUT:
@@ -29,7 +43,7 @@ INPUT:
 OUTCOME: Post issues to GitHub
 OUTPUT: Null
 '''
-def create_issues(issues, destination_url, destination, milestones, labels, milestone_map, credentials, sameInstall):
+def create_issues(issues, destination_url, destination, milestones, labels, milestone_map, source_credentials, credentials, same_install):
     print "Creating issues"
     url = destination_url+"repos/"+destination+"/issues"
 
@@ -38,27 +52,44 @@ def create_issues(issues, destination_url, destination, milestones, labels, mile
     issue_map = {}
     for issue in issues:
         issue_number = issue_exists(issue, current_issues)
+
         if issue_number:
-            issue_map[issue['number']] = issue_number
-            print "Issue exists, getting next one"
+            issue_map[int(issue['number'])] = int(issue_number)
+            print "Issue exists, getting next one. Matched numbers: %d -> %d" % (int(issue['number']), int(issue_number))
             continue
 
+        if issue.get("pull_request", False):
+            print "This is Issue created for pull request ("+str(issue["number"])+")"
+            pull_request_number = process_pull_request(issue, source_credentials, credentials, destination_url, destination, milestones, labels, milestone_map)
+            if pull_request_number:
+                issue_map[int(issue['number'])] = int(pull_request_number)
+            
+            continue
+
+        # TODO remove this break point before last tests
+        continue
+
         #create a new issue object containing only the data necessary for the creation of a new issue
-        assignee = None
-        if (issue["assignee"] and sameInstall):
-            assignee = issue["assignee"]["login"]
-        issue_prime = {"title" : issue["title"], "body" : issue["body"], "assignee": assignee, "state" : issue["state"]}
+        issue_prime = {"title" : issue["title"], "body" : add_user_to_text(issue["user"]["login"], issue["body"])}
+
+        if (issue.get("assignee", False) and same_install):
+            assignee = get_destination_username(issue["assignee"]["login"])
+            issue_prime["assignees"] = [assignee,]
+
         #if milestones were migrated and the issue to be posted contains milestones
-        if milestones and "milestone" in issue and issue["milestone"]!= None:
+        if milestones and issue.get("milestone", False) and issue["milestone"] != None:
             #if the milestone associated with the issue is in the milestone map
-            if issue['milestone']['number'] in milestone_map:
+            if milestone_map and milestone_map.get(issue['milestone']['number'], False):
                 #set the milestone value of the new issue to the updated number of the migrated milestone
                 issue_prime["milestone"] = milestone_map[issue["milestone"]["number"]]
+
         #if labels were migrated and the issue to be migrated contains labels
-        if labels and "labels" in issue:
+        if labels and issue.get("labels", False):
             issue_prime["labels"] = issue["labels"]
+
         r = post_req(url, json.dumps(issue_prime), credentials)
         status = check_res(r)
+        
         #if adding the issue failed
         if not status:
             #get the message from the response
@@ -71,7 +102,20 @@ def create_issues(issues, destination_url, destination, milestones, labels, mile
             continue
 
         returned_issue = json.loads(r.text)
-        issue_map[issue['number']] = returned_issue['number']
+
+        print("update state with current value")
+        issue_prime["state"] = issue["state"]
+        patch_req(returned_issue.get("url"), json.dumps(issue_prime), credentials)
+
+        issue_map[int(issue['number'])] = int(returned_issue['number'])
+        print "Matched numbers: %d -> %d" % (int(issue['number']), int(returned_issue['number']))
+
+        if issue.get("comments", 0) > 0:
+            issue_comments = download_issue_comments(issue.get("comments_url"), source_credentials)
+            create_issue_comments(issue_comments, returned_issue.get("comments_url"), credentials)
+
+    print "Issue Map: "
+    print issue_map
 
     return issue_map
 
@@ -84,11 +128,10 @@ def issue_exists(issue, current_issues):
     return False
 
 def make_flat_issue(issue_dict):
-    flatten_issue = ""
-    flatten_issue += issue_dict["state"] + issue_dict["title"] + issue_dict["body"] + issue_dict["user"]["login"]
+    flatten_issue = issue_dict["state"] + issue_dict["title"] + issue_dict["body"]
     flatten_issue += str(issue_dict["comments"])
 
-    if "pull_request" in issue_dict:
+    if issue_dict.get("pull_request", False):
         flatten_issue += "pull_request"
-    
+
     return flatten_issue

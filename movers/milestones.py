@@ -10,13 +10,12 @@ OUTPUT: retrieved milestones sorted by their number if request was successful. F
 def download_milestones(source_url, source, credentials):
     print "Downloading milestones"
     url = source_url+"repos/"+source+"/milestones?filter=all&state=all"
-    r = get_req(url, credentials)
-    status = check_res(r)
-    if status:
+    data = get_data(url, credentials)
+    if data:
         #if the request succeeded, sort the retrieved milestones by their number
-        sorted_milestones = sorted(json.loads(r.text), key=lambda k: k['number'])
-        return sorted_milestones
-    return False
+        return sorted(data, key=lambda k: k['number'])
+    else:
+        return False
 
 '''
 INPUT:
@@ -38,8 +37,9 @@ def create_milestones(milestones, destination_url, destination, credentials):
         if status:
             #if the POST request succeeded, parse and store the new milestone returned from GitHub
             returned_milestone = json.loads(r.text)
-            #map the original source milestone's number to the newly created milestone's number
+            #map the source milestone's number to the newly created milestone's number
             milestone_map[milestone['number']] = returned_milestone['number']
         else:
             print status
+
     return milestone_map
