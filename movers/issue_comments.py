@@ -81,11 +81,15 @@ def process_reviews(dest_pr_url, source_reviews, credentials):
     for key, value in source_reviews.iteritems():
         if value == None:
             continue
+
+        event = get_review_event(value["state"])
+        if not event:
+            continue
         
         dest_review = {}
         dest_review["commit_id"] = value["commit_id"]
         dest_review["body"] = value["body"]
-        dest_review["event"] = value["event"]
+        dest_review["event"] = event
 
         r = post_req(dest_pr_url + "/reviews", json.dumps(dest_review), credentials)
         status = check_res(r)
@@ -94,3 +98,12 @@ def process_reviews(dest_pr_url, source_reviews, credentials):
         if not status:
             print "FAILED: create review for PR %s " % dest_pr_url
 
+def get_review_event(state):
+    if state == "APPROVED":
+        return "APPROVE"
+    elif state == "CHANGES_REQUESTED":
+        return "REQUEST_CHANGES"
+    elif state == "COMMENTED":
+        return "COMMENT"
+    else:
+        return False

@@ -122,8 +122,7 @@ def issue_exists(issue, current_issues):
     return False
 
 def make_flat_issue(issue_dict):
-    flatten_issue = issue_dict["state"] + issue_dict["title"] + issue_dict["body"]
-    flatten_issue += str(issue_dict["comments"])
+    flatten_issue = issue_dict["state"] + issue_dict["title"] + str(issue_dict["comments"])
 
     if issue_dict.get("pull_request", False):
         flatten_issue += "pull_request"
