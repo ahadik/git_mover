@@ -13,7 +13,7 @@ def download_projects(source_url, source, credentials):
     data = get_data(url, credentials, "application/vnd.github.inertia-preview+json")
     if data:
         #if the requests succeeded, sort the retireved projects by their number
-        return sorted(json.loads(data), key=lambda k: k['number'])
+        return sorted(data, key=lambda k: k['number'])
     else:
         return False
 
@@ -27,9 +27,8 @@ def download_column_cards(url, credentials):
 
 def create_projects(projects, destination_url, destination, issue_map, credentials, source):
     print "Creating projects"
-    print "Issue Map: "
-    print issue_map
-
+    
+    issue_url = destination_url+"repos/"+destination+"/issues/%d"
     url = destination_url+"repos/"+destination+"/projects"
 
     for project in projects:
@@ -51,9 +50,9 @@ def create_projects(projects, destination_url, destination, issue_map, credentia
             if not columns:
                 continue
             else:
-                create_project_columns(columns, returned_project["columns_url"], credentials, issue_map, source)
+                create_project_columns(columns, returned_project["columns_url"], credentials, issue_map, source, issue_url)
 
-def create_project_columns(columns, url, credentials, issue_map, source):
+def create_project_columns(columns, url, credentials, issue_map, source, issue_url):
     print "Creating columns"
     for column in columns:
         column_dest = {}
@@ -70,15 +69,15 @@ def create_project_columns(columns, url, credentials, issue_map, source):
             if not cards:
                 continue
             else:
-                create_column_cards(cards, returned_column["cards_url"], credentials, issue_map)
+                create_column_cards(cards, returned_column["cards_url"], credentials, issue_map, issue_url)
 
-def create_column_cards(cards, url, credentials, issue_map):
+def create_column_cards(cards, url, credentials, issue_map, issue_url):
     print "Creating cards"
     for card in cards:
         card_dest = {"creator": {}}
         card_dest["note"] = card["note"]
         if card.get("content_url", False):
-            content_id = get_card_content_id(card["content_url"], issue_map)
+            content_id = get_card_content_id(card["content_url"], issue_map, issue_url, credentials)
             if content_id:
                 card_dest["content_id"] = content_id
                 card_dest["content_type"] = "Issue"
@@ -94,13 +93,15 @@ def create_column_cards(cards, url, credentials, issue_map):
         else:
             print "Cannot create cart without note AND content_id"
 
-def get_card_content_id(card_content_url, issue_map):
+def get_card_content_id(card_content_url, issue_map, issue_url, credentials):
     splitted_content_url = card_content_url.split("/")
     content_id = int(splitted_content_url[-1])
     # replace old issue number with new one
     if issue_map.get(content_id, False):
         print "Getting " + str(issue_map[content_id]) + " for " + str(content_id)
-        return issue_map[content_id]
-    else:
-        print "Issue with number "+str(content_id)+" not found in map"
-        return False
+        dest_issue_data = get_data(issue_url % int(issue_map[content_id]), credentials)
+        if dest_issue_data:
+            return dest_issue_data.get("id")
+    
+    print "Issue with number "+str(content_id)+" not found in map"
+    return False
