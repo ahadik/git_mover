@@ -33,7 +33,7 @@ def create_projects(projects, destination_url, destination, issue_map, credentia
     url = destination_url+"repos/"+destination+"/projects"
 
     for project in projects:
-        project_dest = {"creator": {}}
+        project_dest = {}
         project_dest["name"] = project["name"]
         project_dest["body"] = add_user_to_text(project["creator"]["login"], project["body"])
         r = post_req(url, json.dumps(project_dest), credentials, "application/vnd.github.inertia-preview+json")
@@ -51,11 +51,10 @@ def create_projects(projects, destination_url, destination, issue_map, credentia
             if not columns:
                 continue
             else:
-                create_project_columns(columns, returned_project['id'], destination_url, credentials, issue_map, source)
+                create_project_columns(columns, returned_project["columns_url"], credentials, issue_map, source)
 
-def create_project_columns(columns, project_id, destination_url, credentials, issue_map, source):
+def create_project_columns(columns, url, credentials, issue_map, source):
     print "Creating columns"
-    url = destination_url + "projects/"+str(project_id)+"/columns"
     for column in columns:
         column_dest = {}
         column_dest["name"] = column["name"]
@@ -71,15 +70,13 @@ def create_project_columns(columns, project_id, destination_url, credentials, is
             if not cards:
                 continue
             else:
-                create_column_cards(cards, returned_column["id"], destination_url, credentials, issue_map)
+                create_column_cards(cards, returned_column["cards_url"], credentials, issue_map)
 
-def create_column_cards(cards, column_id, destination_url, credentials, issue_map):
+def create_column_cards(cards, url, credentials, issue_map):
     print "Creating cards"
-    url = destination_url + "projects/columns/"+str(column_id)+"/cards"
     for card in cards:
         card_dest = {"creator": {}}
         card_dest["note"] = card["note"]
-        card_dest["creator"]["login"] = card["creator"]["login"]
         if card.get("content_url", False):
             content_id = get_card_content_id(card["content_url"], issue_map)
             if content_id:
@@ -106,4 +103,4 @@ def get_card_content_id(card_content_url, issue_map):
         return issue_map[content_id]
     else:
         print "Issue with number "+str(content_id)+" not found in map"
-        return None
+        return False
