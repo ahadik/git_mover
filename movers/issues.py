@@ -66,6 +66,7 @@ def create_issues(issues, destination_url, destination, milestones, labels, mile
             
             continue
 
+        print "Creating new issue with source number %d" % issue["number"]
         #create a new issue object containing only the data necessary for the creation of a new issue
         issue_prime = {"title" : issue["title"], "body" : get_issue_body(issue)}
 
