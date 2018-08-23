@@ -127,16 +127,17 @@ def create_labels(labels, destination_url, destination, credentials):
     url = destination_url + "repos/" + destination + "/labels?filter=all"
     # download labels from the destination and pass them into dictionary of label names
     check_labels = download_labels(destination_url, destination, credentials)
-    existing_labels = {}
-    for existing_label in check_labels:
-        existing_labels[existing_label["name"]] = existing_label
-    for label in labels:
-        # for every label that was downloaded from the source, check if it already exists in the source.
-        # If it does, don't add it.
-        if label["name"] not in existing_labels:
-            label_prime = {"name": label["name"], "color": label["color"]}
-            r = post_req(url, json.dumps(label_prime), credentials)
-            check_res(r)
+    if check_labels:
+        existing_labels = {}
+        for existing_label in check_labels:
+            existing_labels[existing_label["name"]] = existing_label
+        for label in labels:
+            # for every label that was downloaded from the source, check if it already exists in the source.
+            # If it does, don't add it.
+            if label["name"] not in existing_labels:
+                label_prime = {"name": label["name"], "color": label["color"]}
+                r = post_req(url, json.dumps(label_prime), credentials)
+                check_res(r)
 
 
 def create_issues(issues, destination_url, destination, milestones, labels, milestone_map, credentials, sameInstall):
@@ -173,7 +174,7 @@ def create_issues(issues, destination_url, destination, milestones, labels, mile
             # get the message from the response
             message = json.loads(r.text)
             # if the error message is for an invalid entry because of the assignee field, remove it and repost with no assignee
-            if message['errors'][0]['code'] == 'invalid' and message['errors'][0]['field'] == 'assignee':
+            if 'errors' in message and message['errors'][0]['code'] == 'invalid' and message['errors'][0]['field'] == 'assignee':
                 sys.stderr.write("WARNING: Assignee " + message['errors'][0]['value'] + " on issue \"" + issue_prime['title'] +
                                  "\" does not exist in the destination repository. Issue added without assignee field.\n\n")
                 issue_prime.pop('assignee')
