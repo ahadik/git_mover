@@ -226,6 +226,9 @@ def main():
     if not (args.destinationUserName):
         print('No destination User Name provided, defaulting to source User Name: ' + args.user_name)
         args.destinationUserName = args.user_name
+    if not (args.destinationToken):
+        print('No destination Token provided, defaulting to source Token: ' + args.token)
+        args.destinationToken = args.token
 
     destination_credentials = {
         'user_name': args.destinationUserName, 'token': args.destinationToken}
