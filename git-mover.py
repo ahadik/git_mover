@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import requests, json, argparse, sys
 
 #Test if a response object is valid
