@@ -6,7 +6,6 @@ import json
 import argparse
 import sys
 
-
 def check_res(r):
     """Test if a response object is valid"""
     # if the response status code is a failure (outside of 200 range)
