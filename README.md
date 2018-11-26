@@ -1,5 +1,5 @@
 # GitMover
-A Python script to migrate milestones, labels, and issues between repositories.
+A Python script to migrate milestones, labels, issues and releases between repositories.
 
 There was once no easy way to migrate your team's collaborative work (Milestones, Labels, Issues) to another repository. This was especially thorny for teams moving a project into GitHub Enterprise, or open sourcing an existing project by moving it out of GitHub Enterprise. This is a tool to help that process.
 
@@ -48,3 +48,5 @@ For authentication, GitMover uses a personal access token, which can be generate
   `--labels, -l`: Toggle on Label migration.
   
   `--issues, -i`: Toggle on Issue migration.
+
+  `--releases, -r`: Toggle on Release migration.
