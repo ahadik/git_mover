@@ -13,6 +13,7 @@ def check_res(r):
         # print the status code and associated response. Return false
         print("STATUS CODE: " + str(r.status_code))
         print("ERROR MESSAGE: " + r.text)
+        print("REQUEST: " + str(r))
         # if error, return False
         return False
     # if successful, return True
@@ -24,6 +25,7 @@ def get_req(url, credentials):
     INPUT: an API endpoint for retrieving data
     OUTPUT: the request object containing the retrieved data for successful requests. If a request fails, False is returned.
     """
+    print("GETTING: " + url)
     r = requests.get(url=url, auth=(credentials['user_name'], credentials['token']), headers={
                      'Content-type': 'application/json'})
     return r
@@ -34,6 +36,7 @@ def post_req(url, data, credentials):
     INPUT: an API endpoint for posting data
     OUTPUT: the request object containing the posted data response for successful requests. If a request fails, False is returned.
     """
+    print("POSTING: " + url)
     r = requests.post(url=url, data=data, auth=(credentials['user_name'], credentials['token']), headers={
                       'Content-type': 'application/json', 'Accept': 'application/vnd.github.v3.html+json'})
     return r
@@ -89,6 +92,21 @@ def download_labels(source_url, source, credentials):
     return False
 
 
+def download_releases(source_url, source, credentials):
+    """
+    INPUT:
+        source_url: the root url for the GitHub API
+        source: the team and repo '<team>/<repo>' to retrieve releases from
+    OUTPUT: retrieved releases if request was successful. False otherwise
+    """
+    url = source_url + "repos/" + source + "/releases"
+    r = get_req(url, credentials)
+    status = check_res(r)
+    if status:
+        return json.loads(r.text)
+    return False
+
+
 def create_milestones(milestones, destination_url, destination, credentials):
     """Post milestones to GitHub
     INPUT:
@@ -125,18 +143,48 @@ def create_labels(labels, destination_url, destination, credentials):
     """
     url = destination_url + "repos/" + destination + "/labels?filter=all"
     # download labels from the destination and pass them into dictionary of label names
-    check_labels = download_labels(destination_url, destination, credentials)
-    if check_labels:
-        existing_labels = {}
-        for existing_label in check_labels:
-            existing_labels[existing_label["name"]] = existing_label
-        for label in labels:
-            # for every label that was downloaded from the source, check if it already exists in the source.
-            # If it does, don't add it.
-            if label["name"] not in existing_labels:
-                label_prime = {"name": label["name"], "color": label["color"]}
-                r = post_req(url, json.dumps(label_prime), credentials)
-                check_res(r)
+    check_labels = download_labels(destination_url, destination, credentials) or []
+    existing_labels = {}
+    for existing_label in check_labels:
+        existing_labels[existing_label["name"]] = existing_label
+    for label in labels:
+        # for every label that was downloaded from the source, check if it already exists in the source.
+        # If it does, don't add it.
+        if label["name"] not in existing_labels:
+            label_prime = {"name": label["name"], "color": label["color"]}
+            print("Migrating Label: " + label["name"])
+            r = post_req(url, json.dumps(label_prime), credentials)
+            check_res(r)
+
+
+def create_releases(releases, destination_url, destination, credentials):
+    """Post releases to GitHub
+    INPUT:
+        releases: python list of dicts containing release info to be POSTED to GitHub
+        destination_url: the root url for the GitHub API
+        destination: the team and repo '<team>/<repo>' to post releases to
+    OUTPUT: Null
+    """
+    url = destination_url + "repos/" + destination + "/releases"
+    # download releases from the destination and pass them into dictionary of
+    # release names
+    check_releases = download_releases(destination_url, destination, credentials) or []
+    existing_releases = {}
+    for existing_release in check_releases:
+        existing_relases[existing_release["name"]] = existing_release
+    for release in releases:
+        # for every release that was downloaded from the source, check if it
+        # already exists in the destination.
+        # If it does, don't add it.
+        if release["name"] not in existing_releases:
+            release_prime = {"tag_name": release["tag_name"],
+                    "target_commitish": release["target_commitish"],
+                    "name": release["name"],
+                    "body": release["body"],
+                    "prerelease": release["prerelease"]}
+            print("Migrating Release: " + release["name"])
+            r = post_req(url, json.dumps(release_prime), credentials)
+            check_res(r)
 
 
 def create_issues(issues, destination_url, destination, milestones, labels, milestone_map, credentials, sameInstall):
@@ -205,6 +253,8 @@ def main():
                         help='Toggle on Label migration.')
     parser.add_argument('--issues', '-i', action="store_true",
                         help='Toggle on Issue migration.')
+    parser.add_argument('--releases', '-r', action="store_true",
+                        help='Toggle on Release migration.')
     args = parser.parse_args()
 
     destination_repo = args.destination_repo
@@ -238,10 +288,11 @@ def main():
 
     milestone_map = None
 
-    if args.milestones is False and args.labels is False and args.issues is False:
+    if args.milestones is False and args.labels is False and args.issues is False and args.releases is False:
         args.milestones = True
         args.labels = True
         args.issues = True
+        args.releases = True
 
     if args.milestones:
         milestones = download_milestones(
@@ -282,6 +333,19 @@ def main():
             quit()
         else:
             print("No Issues found. None migrated")
+
+    if args.releases:
+        releases = download_releases(source_root, source_repo, source_credentials)
+        if releases:
+            create_releases(releases, destination_root, destination_repo,
+                    destination_credentials)
+        elif releases is False:
+            sys.stderr.write(
+                'ERROR: Releases failed to be retrieved. Exiting...')
+            quit()
+        else:
+            print("No ssues found. None migrated")
+
 
 
 if __name__ == "__main__":
