@@ -171,7 +171,7 @@ def create_releases(releases, destination_url, destination, credentials):
     check_releases = download_releases(destination_url, destination, credentials) or []
     existing_releases = {}
     for existing_release in check_releases:
-        existing_relases[existing_release["name"]] = existing_release
+        existing_releases[existing_release["name"]] = existing_release
     for release in releases:
         # for every release that was downloaded from the source, check if it
         # already exists in the destination.
