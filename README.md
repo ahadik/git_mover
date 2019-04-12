@@ -1,5 +1,8 @@
 # GitMover
-A Python script to migrate milestones, labels, and issues between repositories.
+A Python script to copy the repository (all commits/branches/labels) and migrate milestones, labels, and issues between repositories.
+
+It cannot migrate pull requests and comments in the pull requests. Pull request is a type of issue github internally, and there is an API to get them.
+But a pull request contains github internal data (eg. diff/patch blobs) and there's no API to migrate them.
 
 There was once no easy way to migrate your team's collaborative work (Milestones, Labels, Issues) to another repository. This was especially thorny for teams moving a project into GitHub Enterprise, or open sourcing an existing project by moving it out of GitHub Enterprise. This is a tool to help that process.
 
@@ -13,8 +16,19 @@ $ git-mover.py [-h] [--destinationToken [DESTINATIONTOKEN]]
                     [--destinationUserName [DESTINATIONUSERNAME]]
                     [--sourceRoot [SOURCEROOT]]
                     [--destinationRoot [DESTINATIONROOT]] [--milestones]
-                    [--labels] [--issues]
+                    [--labels] [--issues] [--repo] [--clone]
                     user_name token source_repo destination_repo
+```
+
+### Example
+##### Move GHE repository dev/gcp to github.com with milestones, labels, and issues (when repository freshbooks/gcp doesn't exist)
+```bash
+$ git-mover.py wsim 9asdklef91239dbfk0123123 dev/gcp freshbooks/gcp --dt 012kfjasdf0123jkasdf -dun wooseung-sim -m -l -i -r
+```
+
+##### Move GHE repository dev/gcp to github.com with milestones, labels, and issues (when empty repository freshbooks/gcp exist)
+```bash
+$ git-mover.py wsim 9asdklef91239dbfk0123123 dev/gcp freshbooks/gcp --dt 012kfjasdf0123jkasdf -dun wooseung-sim -m -l -i -c
 ```
 
 For authentication, GitMover uses a personal access token, which can be generated in your GitHub Profile settings.
@@ -33,7 +47,7 @@ For authentication, GitMover uses a personal access token, which can be generate
   
   `--sourceRoot [SOURCEROOT], -sr [SOURCEROOT]`: The GitHub domain to migrate from. Defaults to https://www.github.com. For GitHub enterprise customers, enter the domain for your GitHub installation.
   
-  `--destinationRoot [DESTINATIONROOT], -dr [DESTINATIONROOT]`: The GitHub domain to migrate to. Defaults to https://www.github.com. For GitHub enterprise customers, enter the domain for your GitHub installation.
+  `--destinationRoot [DESTINATIONROOT], -dr [DESTINATIONROOT]`: The GitHub domain to migrate to. Defaults to https://github.2ndsiteinc.com. For GitHub enterprise customers, enter the domain for your GitHub installation.
   
   `--destinationToken [DESTINATIONTOKEN], -dt [DESTINATIONTOKEN]`: Your personal access token for the destination account, if you are migrating between different GitHub installations.
   
@@ -44,3 +58,9 @@ For authentication, GitMover uses a personal access token, which can be generate
   `--labels, -l`: Toggle on Label migration.
   
   `--issues, -i`: Toggle on Issue migration.
+
+  `--repo, -r`: Toggle on create new repository on destination GitHub. By default it creates private repository. Create repo contains clone the repo automatically.
+
+  `--clone, -c`: Toggle on clone source repository to destination.
+
+  `--inheritVisibility, -v`: Inherit visibility of source repository. (default is private) It works only with -r option.

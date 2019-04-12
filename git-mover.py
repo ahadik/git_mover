@@ -1,4 +1,11 @@
-import requests, json, argparse, sys
+import requests, json, argparse, sys, tempfile, os, shutil
+from urlparse import urlparse
+
+#default constants
+ghe_url = 'https://github.2ndsiteinc.com'
+ghe_api_path = '/api/v3'
+github_url = 'https://github.com'
+github_api_url = 'https://api.github.com'
 
 #Test if a response object is valid
 def check_res(r):
@@ -27,6 +34,20 @@ OUTPUT: the request object containing the posted data response for successful re
 def post_req(url, data, credentials):
 	r = requests.post(url=url, data=data, auth=(credentials['user_name'], credentials['token']), headers={'Content-type': 'application/json', 'Accept': 'application/vnd.github.v3.html+json'})
 	return r
+
+'''
+INPUT:
+	source_url: the root url for the GitHub API
+	source: the team and repo '<team>/<repo>' to retrieve repository information from
+OUTPUT: retrieved repository information.
+'''
+def download_repository(source_url, source, credentials):
+	url = source_url+"repos/"+source
+	r = get_req(url, credentials)
+	status = check_res(r)
+	if status:
+		return json.loads(r.text)
+	return False
 
 '''
 INPUT:
@@ -73,6 +94,53 @@ def download_labels(source_url, source, credentials):
 	if status:
 		return json.loads(r.text)
 	return False
+
+'''
+INPUT:
+	repo: source repository information
+	destination_url: the root url for the GitHub API
+	destination: the team and repo '<team>/<repo>' to post milestones to
+OUTCOME: Post new repository to GitHub
+OUTPUT: A dict of new repository information
+'''
+def create_repository(repo, destination_url, destination, credentials, inheritVisibility):
+	destinations = destination.split('/')
+	url = destination_url+"orgs/"+destinations[0]+"/repos"
+	privateRepo = True if not inheritVisibility else repo['private']
+	repository = {"name": destinations[1], "description": repo['description'], 'homepage': repo['homepage'], 'private': privateRepo, 'has_projects': repo['has_projects'], 'auto_init': False}
+	r = post_req(url, json.dumps(repository), credentials)
+	status = check_res(r)
+	if status:
+		#if the POST request succeeded, parse and store the new milestone returned from GitHub
+		return json.loads(r.text)
+	else:
+		print status
+	return {}
+
+'''
+INPUT:
+	source_root: source repository information
+	source_repo: the root url for the GitHub API
+	source_credentials: the team and repo '<team>/<repo>' to post milestones to
+OUTCOME: Post new repository to GitHub
+OUTPUT: A dict of new repository information
+'''
+def clone_repository(source_root, source_repo, source_credentials, destination_root, destination_repo, destination_credentials):
+	github_api_host = 'api.github.com'
+	source = urlparse(source_root)
+	source_host = 'github.com' if source.netloc.lower() == github_api_host else source.netloc[::-1].replace(ghe_api_path[::-1], '' , 1)[::-1]
+	sourceUrl = source.scheme+'://'+source_credentials['user_name']+':'+source_credentials['token']+'@'+source_host+source.path.replace(ghe_api_path, '', 1)+source_repo+'.git'
+	destination = urlparse(destination_root)
+	destination_host = 'github.com' if destination.netloc.lower() == github_api_host else destination.netloc[::-1].replace(ghe_api_path[::-1], '' , 1)[::-1]
+	destinationUrl = destination.scheme+'://'+destination_credentials['user_name']+':'+destination_credentials['token']+'@'+destination_host+destination.path.replace(ghe_api_path, '', 1)+destination_repo+'.git'
+	current_directory = os.getcwd()
+	temp_dir = tempfile.mkdtemp()
+	os.chdir(temp_dir)
+	cmd = os.system("git clone --bare "+sourceUrl+" .")
+	cmd |= os.system("git push --mirror "+destinationUrl)
+	os.chdir(current_directory)
+	shutil.rmtree(temp_dir)
+	return cmd == 0
 
 '''
 INPUT:
@@ -170,22 +238,32 @@ def main():
 	parser.add_argument('destination_repo', type=str, help='the team and repo to migrate to: <team_name>/<repo_name>')
 	parser.add_argument('--destinationToken', '-dt', nargs='?', type=str, help='Your personal access token for the destination account, if you are migrating between GitHub installations')
 	parser.add_argument('--destinationUserName', '-dun', nargs='?', type=str, help='Username for destination account, if you are migrating between GitHub installations')
-	parser.add_argument('--sourceRoot', '-sr', nargs='?', default='https://api.github.com', type=str, help='The GitHub domain to migrate from. Defaults to https://www.github.com. For GitHub enterprise customers, enter the domain for your GitHub installation.')
-	parser.add_argument('--destinationRoot', '-dr', nargs='?', default='https://api.github.com', type=str, help='The GitHub domain to migrate to. Defaults to https://www.github.com. For GitHub enterprise customers, enter the domain for your GitHub installation.')
+	parser.add_argument('--sourceRoot', '-sr', nargs='?', default=ghe_url, type=str, help='The GitHub domain to migrate from. Defaults to '+ghe_url+'. For GitHub enterprise customers, enter the domain for your GitHub installation.')
+	parser.add_argument('--destinationRoot', '-dr', nargs='?', default=github_url, type=str, help='The GitHub domain to migrate to. Defaults to '+github_url+'. For GitHub enterprise customers, enter the domain for your GitHub installation.')
 	parser.add_argument('--milestones', '-m', action="store_true", help='Toggle on Milestone migration.')
 	parser.add_argument('--labels', '-l', action="store_true", help='Toggle on Label migration.')
 	parser.add_argument('--issues', '-i', action="store_true", help='Toggle on Issue migration.')
+	parser.add_argument('--repo', '-r', action="store_true", help='Toggle on create new repository on destination GitHub.')
+	parser.add_argument('--clone', '-c', action="store_true", help='Toggle on clone source repository to destination.')
+	parser.add_argument('--inheritVisibility', '-v', action="store_true", help='Inherit visibility of source repository. It works only with -r option.')
+
 	args = parser.parse_args()
 
 	destination_repo = args.destination_repo
 	source_repo = args.source_repo
 	source_credentials = {'user_name' : args.user_name, 'token' : args.token}
 
-	if (args.sourceRoot != 'https://api.github.com'):
-		args.sourceRoot += '/api/v3'
+	if (args.sourceRoot == github_url):
+		args.sourceRoot = github_api_url
 
-	if (args.destinationRoot != 'https://api.github.com'):
-		args.destinationRoot += '/api/v3'
+	if (args.destinationRoot == github_url):
+		args.destinationRoot = github_api_url
+
+	if (args.sourceRoot != github_api_url) and not args.sourceRoot.endswith(ghe_api_path):
+		args.sourceRoot += ghe_api_path
+
+	if (args.destinationRoot != github_api_url) and not args.destinationRoot.endswith(ghe_api_path):
+		args.destinationRoot += ghe_api_path
 
 	if (args.sourceRoot != args.destinationRoot):
 		if not (args.destinationToken):
@@ -200,6 +278,21 @@ def main():
 
 	source_root = args.sourceRoot+'/'
 	destination_root = args.destinationRoot+'/'
+
+	if args.repo:
+		repo = download_repository(source_root, source_repo, source_credentials)
+		args.clone = True
+		if repo:
+			res = create_repository(repo, destination_root, destination_repo, destination_credentials, args.inheritVisibility)
+		else:
+			sys.stderr.write('ERROR: The source repository failed to be retrieved. Exiting...')
+			quit()
+
+	if args.clone:
+		clone = clone_repository(source_root, source_repo, source_credentials, destination_root, destination_repo, destination_credentials)
+		if not clone:
+			sys.stderr.write('ERROR: Failed to clone the repository. Exiting...')
+			quit()
 
 	milestone_map = None
 
