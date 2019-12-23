@@ -17,7 +17,8 @@ INPUT: an API endpoint for retrieving data
 OUTPUT: the request object containing the retrieved data for successful requests. If a request fails, False is returnedself.
 '''
 def get_req(url, credentials):
-	r = requests.get(url=url, auth=(credentials['user_name'], credentials['token']), headers={'Content-type': 'application/json'})
+	print 'GET ', url
+	r = requests.get(url=url, headers={'Content-type': 'application/json', 'Authorization': 'token '+credentials['token']})
 	return r
 
 '''
@@ -25,7 +26,8 @@ INPUT: an API endpoint for posting data
 OUTPUT: the request object containing the posted data response for successful requests. If a request fails, False is returnedself.
 '''
 def post_req(url, data, credentials):
-	r = requests.post(url=url, data=data, auth=(credentials['user_name'], credentials['token']), headers={'Content-type': 'application/json', 'Accept': 'application/vnd.github.v3.html+json'})
+	print 'POST ', url
+	r = requests.post(url=url, data=data, headers={'Content-type': 'application/json', 'Accept': 'application/vnd.github.v3.html+json', 'Authorization': 'token '+credentials['token']})
 	return r
 
 '''
@@ -50,8 +52,8 @@ INPUT:
 	source: the team and repo '<team>/<repo>' to retrieve issues from
 OUTPUT: retrieved issues sorted by their number if request was successful. False otherwise
 '''
-def download_issues(source_url, source, credentials):
-	url = source_url+"repos/"+source+"/issues?filter=all"
+def download_issues(source_url, source, credentials, filter):
+	url = source_url+"repos/"+source+"/issues?"+filter
 	r = get_req(url, credentials)
 	status = check_res(r)
 	if status:
@@ -170,16 +172,19 @@ def main():
 	parser.add_argument('destination_repo', type=str, help='the team and repo to migrate to: <team_name>/<repo_name>')
 	parser.add_argument('--destinationToken', '-dt', nargs='?', type=str, help='Your personal access token for the destination account, if you are migrating between GitHub installations')
 	parser.add_argument('--destinationUserName', '-dun', nargs='?', type=str, help='Username for destination account, if you are migrating between GitHub installations')
+	parser.add_argument('--filter', '-f', default='filter=all', type=str, help='Filter for issues to move.')
 	parser.add_argument('--sourceRoot', '-sr', nargs='?', default='https://api.github.com', type=str, help='The GitHub domain to migrate from. Defaults to https://www.github.com. For GitHub enterprise customers, enter the domain for your GitHub installation.')
 	parser.add_argument('--destinationRoot', '-dr', nargs='?', default='https://api.github.com', type=str, help='The GitHub domain to migrate to. Defaults to https://www.github.com. For GitHub enterprise customers, enter the domain for your GitHub installation.')
 	parser.add_argument('--milestones', '-m', action="store_true", help='Toggle on Milestone migration.')
 	parser.add_argument('--labels', '-l', action="store_true", help='Toggle on Label migration.')
 	parser.add_argument('--issues', '-i', action="store_true", help='Toggle on Issue migration.')
+
 	args = parser.parse_args()
 
 	destination_repo = args.destination_repo
 	source_repo = args.source_repo
 	source_credentials = {'user_name' : args.user_name, 'token' : args.token}
+	filter = args.filter
 
 	if (args.sourceRoot != 'https://api.github.com'):
 		args.sourceRoot += '/api/v3'
@@ -229,7 +234,7 @@ def main():
 			print "No Labels found. None migrated"
 
 	if args.issues:
-		issues = download_issues(source_root, source_repo, source_credentials)
+		issues = download_issues(source_root, source_repo, source_credentials, filter)
 		if issues:
 			sameInstall = False
 			if (args.sourceRoot == args.destinationRoot):

@@ -11,6 +11,7 @@ Install them with pip: `pip install requests argparse`.
 ```bash
 $ git-mover.py [-h] [--destinationToken [DESTINATIONTOKEN]]
                     [--destinationUserName [DESTINATIONUSERNAME]]
+                    [--filter [ISSUESFILTER]]
                     [--sourceRoot [SOURCEROOT]]
                     [--destinationRoot [DESTINATIONROOT]] [--milestones]
                     [--labels] [--issues]
@@ -30,7 +31,9 @@ For authentication, GitMover uses a personal access token, which can be generate
   
 ### Optional Arguments
   `-h, --help`: show this help message and exit
-  
+
+  `--filter [ISSUESFILTER], -f [ISSUESFILTER]`: filter string to select issues for transfer, e.g. `labels=migrate`. Same as [Github API issues GET parameters](https://developer.github.com/v3/issues/#parameters). Defaults to `filter=all`.
+
   `--sourceRoot [SOURCEROOT], -sr [SOURCEROOT]`: The GitHub domain to migrate from. Defaults to https://www.github.com. For GitHub enterprise customers, enter the domain for your GitHub installation.
   
   `--destinationRoot [DESTINATIONROOT], -dr [DESTINATIONROOT]`: The GitHub domain to migrate to. Defaults to https://www.github.com. For GitHub enterprise customers, enter the domain for your GitHub installation.
